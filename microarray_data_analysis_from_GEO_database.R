@@ -36,13 +36,14 @@ normalized.expr <- as.data.frame(exprs(normalized.data))
 #------------------------------------------------------
 #option 2:
 #if you use the data directly from GEO database wo normalization:
+#you can use this option for illumina datasets
 normalized.expr <- data.frame(gse[[paste0(gseid, "_series_matrix.txt.gz")]]@assayData[["exprs"]])
 #if you want to apply log2 transformation: --------> check the data for log transformation
 normalized.expr= log2(normalized.expr)
 #------------------------------------------------------
 
 feature.data <- gse[[paste0(gseid, "_series_matrix.txt.gz")]]@featureData@data
-feature.data <- feature.data[,c(1,10)] #----> check the column names (AccessionID and Gene Symbol)
+feature.data <- feature.data[,c(1,11)] #----> check the column names (AccessionID and Gene Symbol)
 feature.data$ID= as.character(feature.data$ID) #convert the numerical values into character vector
 
 #option 3
@@ -103,14 +104,15 @@ metadata <- read_excel("celllines.xlsx", sheet = gseid)
 # metadata= metadata[metadata$resistance!= "-",]
 
 # type column represents the disease status, arrange it based on status----> check the disease status column for comparison
-df_unique= data.frame(genesym= toupper(df_unique$genesym),df_unique[, metadata[metadata$type2=="recurrent",]$Accession],df_unique[, metadata[metadata$type2=="primary",]$Accession])
+df_unique= data.frame(genesym= toupper(df_unique$genesym),df_unique[, metadata[metadata$type=="TMZ2",]$Accession],df_unique[, metadata[metadata$type=="TMZ1",]$Accession],df_unique[, metadata[metadata$type=="control",]$Accession])
+df_unique <- df_unique[rowSums(df_unique != 0, na.rm = TRUE) > 0, ] #at least one row (>0) that total expression is different than 0
 
 rnames= df_unique$genesym
 df_unique$genesym <- NULL
 rownames(df_unique) <- rnames
 
 # perform PCA for outlier detection
-sigmatrix= data.frame(status=factor(metadata$type2),rownames=colnames(df_unique))
+sigmatrix= data.frame(status=factor(metadata$type),rownames=colnames(df_unique))
 
 pcaPlot <- function(data, Key, title){
   require(ggplot2)
@@ -160,15 +162,15 @@ rownames(df_unique)= rnames
 #------------------------------------------------------
 
 # DEG analysis with limma
-sigmatrix= data.frame(status=factor(metadata$type2),rownames=colnames(df_unique))
+sigmatrix= data.frame(status=factor(metadata$type),rownames=colnames(df_unique))
 disease_control_list <- sigmatrix
 
-group <- factor(metadata$type2, levels = c("recurrent", "primary")) #-----> check the levels and rearrange them (disease vs control)
+group <- factor(metadata$type, levels = c("TMZ1", "control")) #-----> check the levels and rearrange them (disease vs control)
 design <- model.matrix(~0 + group)
 colnames(design) <- levels(group)
 
 fit <- lmFit(df_unique, design)
-contrast_matrix <- makeContrasts(recurrent_vs_primary = recurrent - primary, levels = design) #----> rearrange this part, disease vs control
+contrast_matrix <- makeContrasts(TMZ1_vs_control = TMZ1 - control, levels = design) #----> rearrange this part, disease vs control
 fit2 <- contrasts.fit(fit, contrast_matrix)
 fit2 <- eBayes(fit2)
 
@@ -237,7 +239,7 @@ genes = data.frame(genes=c("SYTL2", "SPINK6", "MMP11", "ESRRA","TPRG1", "NSMF"))
 genes= unique(genes$genes)
 df_unique= data.frame(genesym= rownames(df_unique), df_unique)
 selected= df_unique[df_unique$genesym %in% genes, ]
-metadata_selected= metadata[, c("Accession","type2")] #------> Accession and type
+metadata_selected= metadata[, c("Accession","type")] #------> Accession and type
 
 data_long <- selected %>%
   pivot_longer(cols = -genesym, names_to = "Sample", values_to = "Expression")
@@ -253,7 +255,7 @@ data_long$type2[which(data_long$type2=="TMZ1")]="TMZ2"
 ggplot(data_long, aes(x = type2, y = Expression, fill = type2)) +
   geom_boxplot() +
   geom_jitter(width = 0.2, size = 1.5, alpha = 0.7) +
-  stat_compare_means(comparisons = list(c("primary", "recurrent")), #-------> change the status names
+  stat_compare_means(comparisons = list(c("control", "TMZ2")), #-------> change the status names
                      method = "t.test", 
                      label = "p.signif", 
                      tip.length = 0.05) +
