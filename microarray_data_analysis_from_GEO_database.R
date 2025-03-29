@@ -161,7 +161,8 @@ df_unique= df_unique[, metadata$Accession]
 rownames(df_unique)= rnames
 #------------------------------------------------------
 
-# DEG analysis with limma
+# DEG analysis with limma 
+# option 1:unpaired samples
 sigmatrix= data.frame(status=factor(metadata$type),rownames=colnames(df_unique))
 disease_control_list <- sigmatrix
 
@@ -173,8 +174,22 @@ fit <- lmFit(df_unique, design)
 contrast_matrix <- makeContrasts(TMZ1_vs_control = TMZ1 - control, levels = design) #----> rearrange this part, disease vs control
 fit2 <- contrasts.fit(fit, contrast_matrix)
 fit2 <- eBayes(fit2)
-
 result <- topTable(fit2, adjust = "BH", number = Inf)
+#------------------------------------------------------
+
+# option 2: paired samples
+
+samples <- data.frame(
+  patient <- factor(c(1:3 ,1:3)),  # match the samples first three samples are recurrent, last three samples from primary 
+  group <- factor(metadat$type2))
+
+design= model.matrix(~ patient + group, data=samples)
+
+fit <- lmFit(mesenchymaldata, design)
+fit <- eBayes(fit)
+results <- topTable(fit, coef="grouprecurrent", adjust="BH", number=Inf) #----> rearrange this part (grouprecurrent) recurrent is diseased group 
+#------------------------------------------------------
+
 DEGs= result[result$P.Value <0.05,]#----> define p-value for significance, you can choose adjusted or non-adjusted p-values based on number of DEGs
 result$FC= 2^(result$logFC)
 
