@@ -16,7 +16,7 @@ library(gprofiler2)
 library(ggplot2)
 library(ggpubr)
 
-gseid= "GSE68029"  #----> define GSEID in here
+gseid= "GSE42669"  #----> define GSEID in here
 gse <- getGEO(gseid, GSEMatrix = TRUE)
 
 #for multiple GPL file: --------> check the gse file
@@ -43,7 +43,7 @@ normalized.expr= log2(normalized.expr)
 #------------------------------------------------------
 
 feature.data <- gse[[paste0(gseid, "_series_matrix.txt.gz")]]@featureData@data
-feature.data <- feature.data[,c(1,11)] #----> check the column names (AccessionID and Gene Symbol)
+feature.data <- feature.data[,c(1,10)] #----> check the column names (AccessionID and Gene Symbol)
 feature.data$ID= as.character(feature.data$ID) #convert the numerical values into character vector
 
 #option 3
@@ -92,6 +92,9 @@ rowwise() %>%
   filter(Total == max(Total)) %>%
   ungroup() %>%
   dplyr::select(-Total) 
+# if this code do not work try this:
+# df_unique=data2 %>%group_by(genesym) %>%summarise_all(max)
+
 df_unique <- df_unique[!(is.na(df_unique$genesym) | df_unique$genesym == ""), ] #remove the nameless row
 df_unique= unique(df_unique)
 
@@ -280,5 +283,3 @@ ggplot(data_long, aes(x = type2, y = Expression, fill = type2)) +
   labs(title = gseid,
        x = "Group",
        y = "Expression Level")
-
-
