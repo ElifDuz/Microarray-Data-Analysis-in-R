@@ -56,6 +56,7 @@ raw.data <- ReadAffy(celfile.path = folder_name)
 #go back to RMA normalization section and create normalized.expr data
 
 feature.data= read.delim2("GPL570-55999.txt", comment.char="#")# ---> get the feature data from GEO database manually
+feature.data= gse@featureData@data # get the feature data from gse data
 feature.data <- feature.data[,c(1,10)] #----> check the column names (AccessionID and Gene Symbol)
 feature.data$ID= as.character(feature.data$ID) #convert the numerical values into character vector
 #------------------------------------------------------
